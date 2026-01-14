@@ -1,0 +1,56 @@
+name: Build and Analyze Star Photo
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build-and-run:
+    runs-on: windows-latest
+
+    steps:
+    # 1. リポジトリの取得
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # 2. Pythonのセットアップ
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    # 3. 必要なツールのインストール
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        # 描画に必要なライブラリ群
+        pip install requests pyinstaller astropy matplotlib scipy numpy
+
+    # 4. アプリ(exe)の作成
+    - name: Build EXE with PyInstaller
+      run: |
+        # numpyなどもhidden-importに追加
+        pyinstaller --onefile --clean --hidden-import=astropy --hidden-import=matplotlib --hidden-import=numpy solve_sky.py
+
+    # 5. アプリの実行
+    - name: Run the Star Analysis App
+      run: |
+        Copy-Item dist\solve_sky.exe .
+        .\solve_sky.exe
+
+    # 6. 【変更】アプリ(exe)のみ保存
+    - name: Upload EXE Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: star-analysis-app
+        path: dist/solve_sky.exe
+
+    # 7. 【変更】2種類の画像を保存
+    - name: Upload Image Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: star-analysis-images
+        path: |
+          result_normalized.jpg
+          result_original_orient.jpg
